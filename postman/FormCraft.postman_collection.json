@@ -1,0 +1,605 @@
+{
+  "info": {
+    "name": "FormCraft API",
+    "description": "Assessment API coverage for bootstrap, admin authentication, form management, public rendering/submission, and admin submission management. Credentials are blank collection variables and must be supplied privately in a local Postman environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "bootstrapToken",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": ""
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "formId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "submissionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "limit",
+      "value": "10",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "API health",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"reports healthy API\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin authentication",
+      "item": [
+        {
+          "name": "Register initial admin (one time)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bootstrapToken\": \"{{bootstrapToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns registration or already-registered status\", () => pm.expect([201, 409]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"has a safe registration response shape\", () => { pm.expect(body.success).to.be.a(\"boolean\"); pm.expect(body.message).to.be.a(\"string\"); if (pm.response.code === 201) { pm.expect(body.user).to.be.an(\"object\"); pm.expect(body.user).to.have.property(\"id\"); pm.expect(body.user).not.to.have.property(\"passwordHash\"); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns an admin session user without a password hash\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.user).to.be.an(\"object\"); pm.expect(body.user.id).to.be.a(\"string\"); pm.expect(body.user.role).to.eql(\"admin\"); pm.expect(body.user).not.to.have.property(\"passwordHash\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current admin session",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns the authenticated admin\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.user.role).to.eql(\"admin\"); pm.expect(body.user.id).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Forms (admin)",
+      "item": [
+        {
+          "name": "Create published form with all field types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Assessment sample\",\n  \"description\": \"Disposable API assessment form\",\n  \"status\": \"published\",\n  \"fields\": [\n    { \"key\": \"short_text\", \"label\": \"Short text\", \"type\": \"TEXT\", \"required\": true },\n    { \"key\": \"email\", \"label\": \"Email\", \"type\": \"EMAIL\", \"required\": true },\n    { \"key\": \"number\", \"label\": \"Number\", \"type\": \"NUMBER\", \"min\": 1, \"max\": 99 },\n    { \"key\": \"phone\", \"label\": \"Phone\", \"type\": \"PHONE\" },\n    { \"key\": \"long_text\", \"label\": \"Long text\", \"type\": \"TEXTAREA\", \"maxLength\": 500 },\n    { \"key\": \"date\", \"label\": \"Date\", \"type\": \"DATE\" },\n    { \"key\": \"select\", \"label\": \"Select\", \"type\": \"SELECT\", \"options\": [\"Red\", \"Blue\"] },\n    { \"key\": \"radio\", \"label\": \"Radio\", \"type\": \"RADIO\", \"options\": [\"Yes\", \"No\"] },\n    { \"key\": \"checkboxes\", \"label\": \"Checkboxes\", \"type\": \"CHECKBOX\", \"options\": [\"A\", \"B\"] }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/forms",
+            "description": "Stores the created form ID in the collection variable formId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns the created form\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.form._id).to.be.a(\"string\"); pm.expect(body.form.status).to.eql(\"published\"); pm.expect(body.form.fields).to.have.lengthOf(9); });",
+                  "if (body.form && body.form._id) pm.collectionVariables.set(\"formId\", body.form._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List forms",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns a forms array\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.forms).to.be.an(\"array\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get form for editing",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms/admin/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns the requested form\", () => { pm.expect(body.success).to.eql(true); pm.expect(String(body.form._id)).to.eql(pm.collectionVariables.get(\"formId\")); pm.expect(body.form.fields).to.be.an(\"array\"); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update form status to draft",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"draft\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/forms/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"form is a draft\", () => pm.expect(pm.response.json().form.status).to.eql(\"draft\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get public form while draft (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"draft form is not publicly available\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"returns a not-found error\", () => { const body = pm.response.json(); pm.expect(body.success).to.eql(false); pm.expect(body.message).to.be.a(\"string\"); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish form",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"published\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/forms/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"form is published\", () => pm.expect(pm.response.json().form.status).to.eql(\"published\"));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get published form",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns the public published form definition\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.form.status).to.eql(\"published\"); pm.expect(String(body.form._id)).to.eql(pm.collectionVariables.get(\"formId\")); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Public submissions",
+      "item": [
+        {
+          "name": "Submit answers (run while form is published)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"responses\": {\n    \"short_text\": \"Sample response\",\n    \"email\": \"person@example.test\",\n    \"number\": 42,\n    \"phone\": \"+1 555 555 0123\",\n    \"long_text\": \"Sample answer\",\n    \"date\": \"2026-01-15\",\n    \"select\": \"Red\",\n    \"radio\": \"Yes\",\n    \"checkboxes\": [\"A\"]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "http://localhost:5000/api/forms/{{formId}}/submissions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"confirms a saved submission\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.submission.id).to.be.a(\"string\"); pm.expect(String(body.submission.formId)).to.eql(pm.collectionVariables.get(\"formId\")); });",
+                  "if (body.submission && body.submission.id) pm.collectionVariables.set(\"submissionId\", body.submission.id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin submission management",
+      "item": [
+        {
+          "name": "List submissions (paginated)",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms/{{formId}}/submissions?page={{page}}&limit={{limit}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns pagination metadata and records\", () => { pm.expect(body.success).to.eql(true); pm.expect(body.total).to.be.a(\"number\"); pm.expect(body.page).to.eql(Number(pm.collectionVariables.get(\"page\") || 1)); pm.expect(body.limit).to.eql(Number(pm.collectionVariables.get(\"limit\") || 10)); pm.expect(body.totalPages).to.be.a(\"number\"); pm.expect(body.submissions).to.be.an(\"array\"); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "View one submission",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/forms/{{formId}}/submissions/{{submissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns answers for the selected form and submission\", () => { pm.expect(body.success).to.eql(true); pm.expect(String(body.submission.formId)).to.eql(pm.collectionVariables.get(\"formId\")); pm.expect(String(body.submission._id)).to.eql(pm.collectionVariables.get(\"submissionId\")); pm.expect(body.submission.responses).to.be.an(\"object\"); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "const submissionId = pm.collectionVariables.get(\"submissionId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(submissionId || \"\")) throw new Error(\"Run Submit answers first to populate submissionId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete one submission (destructive)",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/forms/{{formId}}/submissions/{{submissionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"confirms deletion\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"deletes the requested submission\", () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"submissionId\")));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "const submissionId = pm.collectionVariables.get(\"submissionId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(submissionId || \"\")) throw new Error(\"Run Submit answers first to populate submissionId.\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup (run after submissions)",
+      "item": [
+        {
+          "name": "Delete form (destructive)",
+          "request": {
+            "method": "DELETE",
+            "url": "http://localhost:5000/api/forms/{{formId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"confirms form deletion\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const formId = pm.collectionVariables.get(\"formId\");",
+                  "if (!/^[a-fA-F0-9]{24}$/.test(formId || \"\")) throw new Error(\"Run the Create published form request first to populate formId.\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:5000/api/auth/logout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"confirms logout\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
