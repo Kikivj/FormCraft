@@ -37,7 +37,7 @@ export default function BuilderPage({ id, previewOnly, onNavigate, theme = 'ligh
     try {
       const saved = await dispatch(saveBuilderForm({ form, status })).unwrap();
       await dispatch(fetchForms());
-      setNotice(status === 'published' ? 'Your form is published.' : 'Draft saved.');
+      setNotice(status === 'published' ? 'Form published successfully.' : (!form.id && !form._id ? 'Form created successfully and saved as a draft.' : 'Form saved as draft.'));
       if (!form.id && !form._id) onNavigate(`/builder/${saved.id || saved._id}`);
     } catch {
       // The Redux error message is displayed inline below.
@@ -70,6 +70,7 @@ export default function BuilderPage({ id, previewOnly, onNavigate, theme = 'ligh
         <div className="builder-top-left"><button className="builder-back" onClick={() => onNavigate('/forms')}><Icon name="back" size={17} /><span>All forms</span></button><span className="builder-divider" /><span className="builder-form-name">{form.name || 'Untitled form'}</span><StatusBadge status={form.status} /></div>
         <div className="builder-top-actions"><span className="save-feedback">{isSaving ? <><span className="spinner spinner-small" />Saving…</> : notice || (savedAt ? 'All changes saved' : 'Unsaved changes')}</span><ThemeToggle theme={theme} onToggle={onToggleTheme} /><button className="logout-button" onClick={onLogout}>Log out</button>{!previewOnly && <><button className="button button-secondary builder-save" disabled={isSaving || !canSave} onClick={() => save('draft')}>Save draft</button><button className="button button-primary" disabled={isSaving || !canSave} onClick={() => save('published')}><Icon name="check" size={16} />Publish</button></>}</div>
       </header>
+      {notice && <div className="builder-toast" role="status"><Icon name="check" size={16} />{notice}</div>}
 
       <div className="builder-subbar"><div className="builder-sub-title"><span className="builder-sub-icon"><Icon name="edit" size={16} /></span><span><strong>Form builder</strong><small>Design your form and preview it live</small></span></div><div className="builder-tabs"><button className={activeTab === 'build' ? 'builder-tab-active' : ''} onClick={() => setActiveTab('build')}><Icon name="settings" size={15} />Build</button><button className={activeTab === 'preview' ? 'builder-tab-active' : ''} onClick={() => setActiveTab('preview')}><Icon name="eye" size={15} />Preview</button></div></div>
 

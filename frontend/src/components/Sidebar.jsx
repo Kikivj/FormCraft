@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Icon from './Icon';
 
 const links = [
@@ -7,6 +8,12 @@ const links = [
 ];
 
 export default function Sidebar({ page, onNavigate, open, onClose }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const help = {
+    dashboard: ['Workspace overview', 'See your form totals and recent activity. Use Create new form to start, or open a recent form to edit, preview, or manage responses.'],
+    forms: ['Managing forms', 'Create a form, open a draft to continue editing, preview a published form, or use its actions to manage it.'],
+    submissions: ['Reviewing responses', 'Choose a form to browse its responses. Open a response to see every answer, or delete it from the actions menu.'],
+  }[page] || ['FormCraft help', 'Use the workspace navigation to find your forms and responses.'];
   return (
     <>
       {open && <button className="sidebar-scrim" aria-label="Close navigation" onClick={onClose} />}
@@ -33,9 +40,10 @@ export default function Sidebar({ page, onNavigate, open, onClose }) {
             <div><strong>FormCraft team</strong><span>Free workspace</span></div>
             <Icon name="down" size={14} />
           </div>
-          <div className="sidebar-help"><span className="help-dot">?</span><span>Need a hand?<small>Visit our help center</small></span><Icon name="arrow" size={15} /></div>
+          <button className="sidebar-help" onClick={() => setHelpOpen(true)} aria-haspopup="dialog"><span className="help-dot">?</span><span>Need a hand?<small>Quick page guide</small></span><Icon name="arrow" size={15} /></button>
         </div>
       </aside>
+      {helpOpen && <div className="modal-backdrop help-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setHelpOpen(false); }}><section className="confirm-modal help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><button className="icon-button help-close" onClick={() => setHelpOpen(false)} aria-label="Close help"><Icon name="close" size={17} /></button><div className="confirm-icon help-icon">?</div><div className="eyebrow">QUICK GUIDE</div><h2 id="help-title">{help[0]}</h2><p>{help[1]}</p><div className="confirm-actions"><button className="button button-primary" onClick={() => setHelpOpen(false)}>Got it</button></div></section></div>}
     </>
   );
 }
