@@ -8,7 +8,7 @@ This README describes the implementation in this repository. Scalability ideas a
 
 - [Project Overview](#project-overview)
 - [Key Features](#key-features)
-- [Screenshots](#screenshots)
+- [Application Screenshots](#application-screenshots)
 - [Technology Stack](#technology-stack)
 - [Supported Dynamic Field Types](#supported-dynamic-field-types)
 - [System Architecture](#system-architecture)
@@ -65,14 +65,19 @@ FormCraft/
 - Light and dark themes with a browser-local theme preference.
 - HTTP-only-cookie admin sessions and admin route authorization.
 
-### Screenshots
+## Application Screenshots
 
-No screenshots are currently included in the repository. Replace these placeholders with captured application screens when available.
+### Dashboard
 
-- Dashboard: _Screenshot placeholder_
-- Form Builder: _Screenshot placeholder_
-- Public Form: _Screenshot placeholder_
-- Submission Management: _Screenshot placeholder_
+![Dashboard screenshot](screenshots/dashboard.png)
+
+### Form Builder
+
+![Form Builder screenshot](screenshots/form_builder.png)
+
+### Public Form
+
+![Public Form screenshot](screenshots/public_form.png)
 
 ## Technology Stack
 
